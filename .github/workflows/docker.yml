@@ -75,7 +75,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            docker.io/${{ github.repository }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}
             ${{ secrets.DOCKERHUB_USERNAME && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, github.event.repository.name) }}
           tags: |
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},prefix=edge-
