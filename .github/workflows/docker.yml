@@ -15,10 +15,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  GHCR_IMAGE_NAME: ${{ github.repository }}
-  DOCKERHUB_IMAGE_NAME: ${{ secret.DOCKERHUB_USERNAME }}/${{ github.repository }}
-
 jobs:
   test:
     name: Rust checks & tests
@@ -72,7 +68,7 @@ jobs:
         id: meta_ghcr
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.GHCR_IMAGE_NAME }}
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},prefix=edge-
             type=ref,event=pr
@@ -86,7 +82,7 @@ jobs:
         id: meta_dh
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_IMAGE_NAME }}
+          images: ${{ format('{0}/{1}', secrets.DOCKERHUB_USERNAME, github.event.repository.name) }}
           tags: |
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},prefix=edge-
             type=ref,event=pr
