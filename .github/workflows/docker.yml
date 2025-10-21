@@ -92,7 +92,7 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             
-      - name: Build & (conditionally) push
+      - name: Build & Push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -102,8 +102,12 @@ jobs:
           build-args: |
             BIN_NAME=${{ env.BIN_NAME }}
             APP_PORT=${{ env.APP_PORT }}
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta_ghcr.outputs.tags }}
+            ${{ steps.meta_dh.outputs.tags }}
+          labels: |
+            ${{ steps.meta_ghcr.outputs.labels }}
+            ${{ steps.meta_dh.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
