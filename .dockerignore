@@ -8,6 +8,3 @@ Thumbs.db
 
 # Build output
 /target
-
-# Local environment files
-.env
