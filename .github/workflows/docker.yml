@@ -16,10 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  BIN_NAME: raid-composition-backend
-  APP_PORT: 8000
+  GHCR_IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_IMAGE_NAME: ${{ secret.DOCKERHUB_USERNAME }}/${{ github.repository }}
 
 jobs:
   test:
@@ -70,13 +68,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Docker metadata (tags, labels)
-        id: meta
+      - name: Meta (GHCR)
+        id: meta_ghcr
         uses: docker/metadata-action@v5
         with:
-          images: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}
-            ${{ secrets.DOCKERHUB_USERNAME && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, github.event.repository.name) }}
+          images: ghcr.io/${{ env.GHCR_IMAGE_NAME }}
           tags: |
             type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},prefix=edge-
             type=ref,event=pr
@@ -86,12 +82,19 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
-          labels: |
-            org.opencontainers.image.vendor=raid-composition
-            org.opencontainers.image.title=raid-composition-backend
-            org.opencontainers.image.description=API service for raid composition (game-agnostic)
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Meta (Docker Hub)
+        id: meta_dh
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' }},prefix=edge-
+            type=ref,event=pr
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             
       - name: Build & (conditionally) push
         uses: docker/build-push-action@v6
