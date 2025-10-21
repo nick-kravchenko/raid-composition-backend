@@ -17,7 +17,8 @@ concurrency:
 
 env:
   GHCR_IMAGE_NAME: ${{ github.repository }}
-  DOCKERHUB_IMAGE_NAME: "${{ secret.DOCKERHUB_USERNAME }}/${{ github.repository }}"
+  DOCKERHUB_IMAGE_NAME: ${{ secret.DOCKERHUB_USERNAME }}/${{ github.repository }}
+  secrets: inherit
 
 jobs:
   test:
