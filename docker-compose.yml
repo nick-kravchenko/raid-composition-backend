@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${PORT:-8000}:8000"
+      - "${APP_PORT:-8000}:8000"
     develop:
       watch:
         - action: sync
