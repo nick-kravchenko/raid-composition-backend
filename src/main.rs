@@ -1,19 +1,7 @@
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder };
+use actix_web::{App, HttpServer };
 use std::env;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-  HttpResponse::Ok().body("Hello, world!")
-}
-
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-  HttpResponse::Ok().body(req_body)
-}
-
-async fn manual_hello() -> impl Responder {
-  HttpResponse::Ok().body("Hey there!")
-}
+mod routes;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,9 +11,7 @@ async fn main() -> std::io::Result<()> {
 
   HttpServer::new(|| {
     App::new()
-      .service(hello)
-      .service(echo)
-      .route("/manual_hello", web::get().to(manual_hello))
+      .service(routes::api_v1())
   })
     .bind(("0.0.0.0", app_port))?
     .run()
