@@ -1,8 +1,12 @@
-use actix_web::{ App, HttpServer };
+use std::sync::Arc;
+use actix_web::{ App, HttpServer, web };
+use actix_web::middleware::Logger;
 
-mod routes;
+use crate::api::routes;
+
 mod config;
 mod db;
+mod api;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -25,13 +29,15 @@ async fn main() -> std::io::Result<()> {
   let app_port: u16 = config.app_port;
   println!("Starting server on port: {}", app_port);
 
+  println!("Connecting to the database...");
   let db_pool = db::connect().await.expect("Failed to connect to the database");
-  println!("{}", db_pool.size());
+  println!("db_pool.size: {}", db_pool.size());
   println!("Database connection established.");
-
 
   HttpServer::new(|| {
     App::new()
+      .app_data(web::Data::from(Arc::new(config::config())))
+      .wrap(Logger::default())
       .service(routes::api_v1())
   })
     .bind(("0.0.0.0", app_port))?

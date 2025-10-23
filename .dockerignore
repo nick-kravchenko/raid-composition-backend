@@ -1,3 +1,8 @@
+# VCS files
+.git/
+.github/
+.gitignore
+
 # IDEA files
 .idea/
 .vscode/
@@ -8,3 +13,6 @@ Thumbs.db
 
 # Build output
 /target
+
+# DB files
+/db_data

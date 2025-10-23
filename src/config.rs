@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use std::env;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
   pub app_port: u16,
   pub frontend_base_url: String,

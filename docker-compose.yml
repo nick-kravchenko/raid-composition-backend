@@ -13,9 +13,11 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./db_data:/var/lib/postgresql/data
 
   api:
+    depends_on:
+      - postgres
     build:
       context: .
       dockerfile: local.Dockerfile
@@ -28,6 +30,7 @@ services:
         - action: sync
           path: ./src
           target: /app/src
+          initial_sync: true
         - action: rebuild
           path: ./Cargo.toml
           target: /app/Cargo.toml
