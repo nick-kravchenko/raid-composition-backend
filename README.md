@@ -27,6 +27,9 @@ src/
     dto/                  # API/data transfer structs
 migrations/
   .gitkeep                # Keeps the SQLx embedded migration directory present
+Dockerfile                # Production image build
+local.Dockerfile          # Compose development image with cargo-watch and sqlx-cli
+docker-compose.yml        # Local PostgreSQL, Redis, and API services
 ```
 
 ## Configuration
@@ -111,6 +114,8 @@ The local Docker image uses `cargo-watch`, so changes under `src/` are synced in
 
 With the current `docker-compose.yml`, keep `APP_PORT=8000` in `.env` because the API service exposes container port `8000`. Redis is exposed on `${REDIS_PORT:-6379}` and requires `REDIS_PASSWORD` for clients. Compose still uses shell defaults for local infrastructure convenience, but the API runtime itself requires explicit environment values.
 
+`docker-compose.yml` builds the API from `local.Dockerfile`. The local image includes `cargo-watch` for the development loop and `sqlx-cli` for migration commands. The production `Dockerfile` is separate and builds a locked release binary for a minimal runtime image.
+
 ## Database Migrations
 
 SQLx migrations are embedded into the application binary and run automatically on every API startup. Startup order is PostgreSQL pool creation, migration execution, Redis client creation, then HTTP server bind. If migration execution fails, startup stops with `Failed to run database migrations` and the HTTP server does not bind.
@@ -185,20 +190,27 @@ curl http://localhost:8000/api/v1/health/redis
 
 ```bash
 cargo check
-cargo test
-cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --locked --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 docker compose build api
 ```
 
 ## Docker Images
 
-`Dockerfile` builds a release binary in a Rust Alpine builder image and copies it into a `scratch` runtime image.
+`Dockerfile` builds a locked release binary in a Rust Alpine builder image and copies it into a `scratch` runtime image.
 
 The production runtime image does not include `sqlx-cli` or migration files on disk. Migrations are embedded during the builder stage while `migrations/` is present in the build context, so the final image can remain `FROM scratch`.
 
 Production also runs migrations on startup from the application binary. For future multi-replica Kubernetes deployments, this may move to a dedicated pre-deploy step or Kubernetes Job before application pods roll out.
 
-The GitHub Actions workflow runs on pushes and pull requests to `master`. It performs Rust checks/tests, then builds and publishes Docker images to GHCR and Docker Hub for non-PR events.
+The GitHub Actions workflow runs on pushes and pull requests to `master`, plus published GitHub releases. It performs clippy and tests, builds the production Docker image for `linux/amd64`, and publishes to GHCR and Docker Hub when publishing is allowed:
+
+- Pushes to `master` publish `latest`, `edge-master`, and `sha-*` tags.
+- Published releases require a `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH` tag and publish semver tags.
+- Pull requests from the same repository publish temporary `pr-*` tags.
+- Closed same-repository pull requests trigger cleanup of the temporary PR image tags.
+
+The Docker build enables provenance and SBOM output. Docker Scout reports high vulnerabilities and fails the workflow on critical vulnerabilities for published images.
 
 ## Current Notes
 

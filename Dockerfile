@@ -8,7 +8,7 @@ COPY . .
 
 RUN apk add --no-cache musl-dev
 
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM scratch
 
