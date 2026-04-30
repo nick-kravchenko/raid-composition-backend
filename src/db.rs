@@ -1,22 +1,12 @@
 use actix_web::Result;
 use sqlx::PgPool;
-use crate::config::config;
 
-pub async fn connect() -> Result<PgPool, actix_web::Error> {
-  let config = config();
+use crate::config::DatabaseConfig;
 
-  let database_url = format!(
-    "postgres://{}:{}@{}:{}/{}",
-    config.db_user,
-    config.db_password,
-    config.db_host,
-    config.db_port,
-    config.db_name
-  );
+pub async fn connect(config: &DatabaseConfig) -> Result<PgPool, actix_web::Error> {
+    let pool = PgPool::connect(&config.url()).await.map_err(|e| {
+        actix_web::error::ErrorInternalServerError(format!("Failed to connect to database: {}", e))
+    })?;
 
-  let pool = PgPool::connect(&database_url).await.map_err(|e| {
-    actix_web::error::ErrorInternalServerError(format!("Failed to connect to database: {}", e))
-  })?;
-
-  Ok(pool)
+    Ok(pool)
 }

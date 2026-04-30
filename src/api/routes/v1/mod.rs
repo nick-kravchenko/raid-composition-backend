@@ -1,9 +1,9 @@
-use actix_web::{web, Scope};
+use actix_web::{Scope, web};
 
 pub fn scope() -> Scope {
-  web::scope("/v1")
-    .service(auth::scope())
-    .service(health::scope())
+    web::scope("/v1")
+        .service(auth::scope())
+        .service(health::scope())
 }
 
 pub mod auth;

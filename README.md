@@ -29,7 +29,7 @@ src/
 
 ## Configuration
 
-The application reads configuration from environment variables. During local development, `dotenv` loads values from `.env`.
+The application reads required configuration from environment variables. During local development, `dotenv` loads values from `.env` once during startup.
 
 Create your local environment file from the example:
 
@@ -42,25 +42,26 @@ Required variables:
 | Variable | Description |
 | --- | --- |
 | `APP_PORT` | Port the Actix server binds to. Use `8000` with the current Docker Compose setup. |
-| `FRONTEND_BASE_URL` | Frontend base URL used while building the Discord OAuth redirect URL. |
+| `FRONTEND_BASE_URL` | Frontend base URL used exactly as the Discord OAuth redirect URI. |
 | `DB_HOST` | PostgreSQL host. Use `localhost` for native local runs or `postgres` inside Docker Compose. |
-| `DB_PORT` | PostgreSQL port. Defaults to `5432` if unset. |
+| `DB_PORT` | PostgreSQL port. |
 | `DB_USER` | PostgreSQL user. |
 | `DB_PASSWORD` | PostgreSQL password. |
 | `DB_NAME` | PostgreSQL database name. |
 | `REDIS_HOST` | Redis host. Use `localhost` for native local runs or `redis` inside Docker Compose. The Compose API container overrides this to `redis`. |
-| `REDIS_PORT` | Redis port. Defaults to `6379` in Docker Compose if unset. |
+| `REDIS_PORT` | Redis port. |
 | `REDIS_PASSWORD` | Redis password. Redis starts with `--requirepass`; Docker Compose defaults this to `password` if unset. |
 | `DISCORD_CLIENT_ID` | Discord OAuth application client ID. |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth application client secret. |
-| `DISCORD_REDIRECT_URI` | Discord OAuth redirect URI. |
 | `COOKIE_DOMAIN` | Cookie domain for auth/session cookies. |
+
+The API requires every variable above to be present, non-empty, and valid at startup. Ports must be non-zero `u16` values. Missing or invalid configuration stops the server before it binds an HTTP port.
 
 Example Docker Compose-oriented values:
 
 ```env
 APP_PORT=8000
-FRONTEND_BASE_URL=http://localhost:3000
+FRONTEND_BASE_URL=http://localhost:4200
 
 DB_HOST=postgres
 DB_PORT=5432
@@ -74,7 +75,6 @@ REDIS_PASSWORD=password
 
 DISCORD_CLIENT_ID=your_discord_client_id
 DISCORD_CLIENT_SECRET=your_discord_client_secret
-DISCORD_REDIRECT_URI=http://localhost:3000/auth/discord/callback
 
 COOKIE_DOMAIN=localhost
 ```
@@ -105,7 +105,7 @@ docker compose up --build
 
 The local Docker image uses `cargo-watch`, so changes under `src/` are synced into the container and the application is rebuilt when `Cargo.toml` changes.
 
-With the current `docker-compose.yml`, keep `APP_PORT=8000` in `.env` because the API service exposes container port `8000`. Redis is exposed on `${REDIS_PORT:-6379}` and requires `REDIS_PASSWORD` for clients.
+With the current `docker-compose.yml`, keep `APP_PORT=8000` in `.env` because the API service exposes container port `8000`. Redis is exposed on `${REDIS_PORT:-6379}` and requires `REDIS_PASSWORD` for clients. Compose still uses shell defaults for local infrastructure convenience, but the API runtime itself requires explicit environment values.
 
 ## API Endpoints
 
@@ -145,8 +145,8 @@ The GitHub Actions workflow runs on pushes and pull requests to `master`. It per
 
 ## Current Notes
 
-- Database connectivity is initialized during startup, but the pool is not yet injected into routes.
-- Health endpoints open short-lived PostgreSQL and Redis connections for checks; shared connection pools are not injected into routes yet.
+- Database and Redis dependencies are initialized during startup and injected into routes through shared application state.
+- Health endpoints use the shared PostgreSQL pool and Redis client.
 - There are no migrations in the repository yet.
 - Discord OAuth is only partially implemented. The authorization URL endpoint exists, but callback handling and token exchange are not implemented.
 - Some auth/session endpoints currently return placeholder responses.
