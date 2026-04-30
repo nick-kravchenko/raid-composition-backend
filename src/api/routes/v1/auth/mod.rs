@@ -9,7 +9,6 @@ pub fn scope() -> Scope {
     .service(
       web::scope("")
         .route("/me", web::get().to(me))
-        .route("/refresh", web::post().to(session::refresh))
         .route("/logout", web::post().to(session::logout))
     )
 }

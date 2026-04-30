@@ -10,12 +10,13 @@ pub struct Config {
   pub db_user: String,
   pub db_password: String,
   pub db_name: String,
+  pub redis_host: String,
+  pub redis_port: u16,
+  pub redis_password: String,
   pub discord_client_id: String,
   pub discord_client_secret: String,
   pub discord_redirect_uri: String,
   pub cookie_domain: String,
-  pub jwt_secret: String,
-  pub jwt_expiration: u64,
 }
 
 pub fn config() -> Config {
@@ -29,11 +30,12 @@ pub fn config() -> Config {
     db_user: env::var("DB_USER").expect("DB_USER must be set"),
     db_password: env::var("DB_PASSWORD").expect("DB_PASSWORD must be set"),
     db_name: env::var("DB_NAME").expect("DB_NAME must be set"),
+    redis_host: env::var("REDIS_HOST").expect("REDIS_HOST must be set"),
+    redis_port: env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string()).parse().expect("REDIS_PORT must be a valid u16"),
+    redis_password: env::var("REDIS_PASSWORD").expect("REDIS_PASSWORD must be set"),
     discord_client_id: env::var("DISCORD_CLIENT_ID").expect("DISCORD_CLIENT_ID must be set"),
     discord_client_secret: env::var("DISCORD_CLIENT_SECRET").expect("DISCORD_CLIENT_SECRET must be set"),
     discord_redirect_uri: env::var("DISCORD_REDIRECT_URI").expect("DISCORD_REDIRECT_URI must be set"),
     cookie_domain: env::var("COOKIE_DOMAIN").expect("COOKIE_DOMAIN must be set"),
-    jwt_secret: env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
-    jwt_expiration: env::var("JWT_EXPIRATION").unwrap_or_else(|_| "3600".to_string()).parse().expect("JWT_EXPIRATION must be a valid u64"),
   }
 }

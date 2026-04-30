@@ -14,3 +14,6 @@ Thumbs.db
 
 # DB files
 /db_data
+
+# AI generated files
+.codex

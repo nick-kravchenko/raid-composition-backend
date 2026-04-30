@@ -19,12 +19,13 @@ async fn main() -> std::io::Result<()> {
   println!("Database User: {}", config.db_user);
   println!("Database Password: {}", config.db_password);
   println!("Database Name: {}", config.db_name);
+  println!("Redis Host: {}", config.redis_host);
+  println!("Redis Port: {}", config.redis_port);
+  println!("Redis Password Configured: {}", !config.redis_password.is_empty());
   println!("Discord Client ID: {}", config.discord_client_id);
   println!("Discord Client Secret: {}", config.discord_client_secret);
   println!("Discord Redirect URI: {}", config.discord_redirect_uri);
   println!("Cookie Domain: {}", config.cookie_domain);
-  println!("JWT Secret: {}", config.jwt_secret);
-  println!("JWT Expiration: {}", config.jwt_expiration);
 
   let app_port: u16 = config.app_port;
   println!("Starting server on port: {}", app_port);
