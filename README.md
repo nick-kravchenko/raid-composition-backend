@@ -6,7 +6,7 @@ Backend API for a raid composition application. The service is written in Rust w
 
 - Rust 2024 edition
 - Actix Web
-- SQLx with PostgreSQL
+- SQLx `0.8.6` with PostgreSQL
 - Redis with the `redis` Rust crate
 - Docker and Docker Compose for local development
 - GitHub Actions for clippy, tests, and Docker image builds
@@ -25,6 +25,8 @@ src/
         health/           # App, PostgreSQL, and Redis health route modules
     controllers/          # Request handling helpers
     dto/                  # API/data transfer structs
+migrations/
+  .gitkeep                # Keeps the SQLx embedded migration directory present
 ```
 
 ## Configuration
@@ -56,6 +58,8 @@ Required variables:
 | `COOKIE_DOMAIN` | Cookie domain for auth/session cookies. |
 
 The API requires every variable above to be present, non-empty, and valid at startup. Ports must be non-zero `u16` values. Missing or invalid configuration stops the server before it binds an HTTP port.
+
+The application runtime uses the `DB_*` variables above and does not require `DATABASE_URL`. `DATABASE_URL` is only needed when running manual SQLx CLI commands.
 
 Example Docker Compose-oriented values:
 
@@ -93,7 +97,7 @@ Use `DB_HOST=localhost` and `REDIS_HOST=localhost` in `.env` when running the AP
 cargo run
 ```
 
-The server binds to `0.0.0.0:${APP_PORT}`.
+The API connects to PostgreSQL, runs embedded SQLx migrations, creates the Redis client, then binds to `0.0.0.0:${APP_PORT}`. If migrations fail, startup stops before the HTTP port is bound.
 
 ## Running With Docker Compose
 
@@ -106,6 +110,54 @@ docker compose up --build
 The local Docker image uses `cargo-watch`, so changes under `src/` are synced into the container and the application is rebuilt when `Cargo.toml` changes.
 
 With the current `docker-compose.yml`, keep `APP_PORT=8000` in `.env` because the API service exposes container port `8000`. Redis is exposed on `${REDIS_PORT:-6379}` and requires `REDIS_PASSWORD` for clients. Compose still uses shell defaults for local infrastructure convenience, but the API runtime itself requires explicit environment values.
+
+## Database Migrations
+
+SQLx migrations are embedded into the application binary and run automatically on every API startup. Startup order is PostgreSQL pool creation, migration execution, Redis client creation, then HTTP server bind. If migration execution fails, startup stops with `Failed to run database migrations` and the HTTP server does not bind.
+
+Migration files live in `migrations/`. Normal migrations must be reversible `.up.sql` and `.down.sql` pairs:
+
+```text
+migrations/
+  20260430120000_create_some_table.up.sql
+  20260430120000_create_some_table.down.sql
+```
+
+Do not edit migrations after they have been applied in a shared environment. SQLx records checksums, so changing applied files can create version or checksum conflicts. Treat a migration as irreversible if it destroys data, transforms data non-bijectively, depends on external state, or would require guessing to revert. Irreversible migrations must include a `.down.sql` file that fails explicitly with a clear reason.
+
+Migration file changes are not watched by Docker Compose. Restart or rebuild the API container after adding or changing migrations so the embedded migration set is compiled into the binary.
+
+### Docker Compose SQLx CLI
+
+The local API image includes `sqlx-cli` pinned to the same SQLx version used by the application. Use the Docker network host name `postgres` for CLI commands run through Compose:
+
+```bash
+export DATABASE_URL=postgres://user:password@postgres:5432/app_db
+
+docker compose run --rm -e DATABASE_URL api sqlx migrate add -r create_some_table
+docker compose run --rm -e DATABASE_URL api sqlx migrate run
+docker compose run --rm -e DATABASE_URL api sqlx migrate revert
+```
+
+The `-r` flag creates the required reversible `.up.sql` and `.down.sql` files. `DATABASE_URL` is passed to the one-off container for SQLx CLI use only; the application runtime still reads `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
+
+### Host SQLx CLI
+
+Host CLI usage is optional. Install the matching CLI version with PostgreSQL support:
+
+```bash
+cargo install sqlx-cli --version 0.8.6 --no-default-features --features postgres
+```
+
+Use `localhost` for the database host when running SQLx from the host against the Compose PostgreSQL port mapping:
+
+```bash
+export DATABASE_URL=postgres://user:password@localhost:5432/app_db
+
+sqlx migrate add -r create_some_table
+sqlx migrate run
+sqlx migrate revert
+```
 
 ## API Endpoints
 
@@ -135,11 +187,16 @@ curl http://localhost:8000/api/v1/health/redis
 cargo check
 cargo test
 cargo clippy --workspace --all-targets -- -D warnings
+docker compose build api
 ```
 
 ## Docker Images
 
 `Dockerfile` builds a release binary in a Rust Alpine builder image and copies it into a `scratch` runtime image.
+
+The production runtime image does not include `sqlx-cli` or migration files on disk. Migrations are embedded during the builder stage while `migrations/` is present in the build context, so the final image can remain `FROM scratch`.
+
+Production also runs migrations on startup from the application binary. For future multi-replica Kubernetes deployments, this may move to a dedicated pre-deploy step or Kubernetes Job before application pods roll out.
 
 The GitHub Actions workflow runs on pushes and pull requests to `master`. It performs Rust checks/tests, then builds and publishes Docker images to GHCR and Docker Hub for non-PR events.
 
@@ -147,6 +204,6 @@ The GitHub Actions workflow runs on pushes and pull requests to `master`. It per
 
 - Database and Redis dependencies are initialized during startup and injected into routes through shared application state.
 - Health endpoints use the shared PostgreSQL pool and Redis client.
-- There are no migrations in the repository yet.
+- The migration directory exists, but there are no schema migrations in the repository yet.
 - Discord OAuth is only partially implemented. The authorization URL endpoint exists, but callback handling and token exchange are not implemented.
 - Some auth/session endpoints currently return placeholder responses.

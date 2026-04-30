@@ -8,7 +8,7 @@ actix-web = "4.11.0"
 serde = { version = "1.0" }
 serde_json = { version = "1.0" }
 dotenv = "0.15.0"
-sqlx = { version = "0.9.0-alpha.1", features = ["postgres", "runtime-tokio", "chrono", "uuid", "ipnet"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "chrono", "uuid", "ipnet"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 redis = { version = "1.2.0", features = ["tokio-comp"] }

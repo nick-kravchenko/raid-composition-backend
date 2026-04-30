@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache musl-dev
 
 RUN cargo install cargo-watch
+RUN cargo install sqlx-cli --version 0.8.6 --no-default-features --features postgres
 
 COPY . .
 

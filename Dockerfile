@@ -1,4 +1,4 @@
-FROM rust:1.90.0-alpine as builder
+FROM rust:1.90.0-alpine AS builder
 
 LABEL authors="krava"
 

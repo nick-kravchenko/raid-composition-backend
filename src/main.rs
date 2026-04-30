@@ -43,11 +43,18 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on port: {}", app_port);
 
     println!("Connecting to the database...");
-    let db_pool = db::connect(&config.database)
-        .await
-        .map_err(|error| std::io::Error::other(error.to_string()))?;
+    let db_pool = db::connect(&config.database).await.map_err(|error| {
+        std::io::Error::other(format!("Failed to connect to database: {error}"))
+    })?;
     println!("db_pool.size: {}", db_pool.size());
     println!("Database connection established.");
+
+    println!("Running database migrations...");
+    db::run_migrations(&db_pool).await.map_err(|error| {
+        eprintln!("Failed to run database migrations: {error}");
+        std::io::Error::other(format!("Failed to run database migrations: {error}"))
+    })?;
+    println!("Database migrations completed.");
 
     println!("Creating Redis client...");
     let redis_client = redis::Client::open(config.redis.url()).map_err(|error| {

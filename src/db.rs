@@ -1,12 +1,13 @@
-use actix_web::Result;
-use sqlx::PgPool;
+use sqlx::{PgPool, migrate::MigrateError};
 
 use crate::config::DatabaseConfig;
 
-pub async fn connect(config: &DatabaseConfig) -> Result<PgPool, actix_web::Error> {
-    let pool = PgPool::connect(&config.url()).await.map_err(|e| {
-        actix_web::error::ErrorInternalServerError(format!("Failed to connect to database: {}", e))
-    })?;
+pub async fn connect(config: &DatabaseConfig) -> Result<PgPool, sqlx::Error> {
+    let pool = PgPool::connect(&config.url()).await?;
 
     Ok(pool)
+}
+
+pub async fn run_migrations(pool: &PgPool) -> Result<(), MigrateError> {
+    sqlx::migrate!("./migrations").run(pool).await
 }
