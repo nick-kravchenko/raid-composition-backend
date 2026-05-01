@@ -334,7 +334,7 @@ where
     F: Fn(&'static str) -> Option<String>,
 {
     let value = required_string(get, name)?;
-    if value.as_bytes().len() < minimum_bytes {
+    if value.len() < minimum_bytes {
         return Err(ConfigError::WeakSecret {
             name,
             minimum_bytes,

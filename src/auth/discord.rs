@@ -168,10 +168,10 @@ pub fn avatar_url(
 }
 
 fn default_avatar_index(discord_user_id: &str, discriminator: Option<&str>) -> u64 {
-    if let Some(discriminator) = discriminator.and_then(|value| value.parse::<u64>().ok()) {
-        if discriminator > 0 {
-            return discriminator % 5;
-        }
+    if let Some(discriminator) = discriminator.and_then(|value| value.parse::<u64>().ok())
+        && discriminator > 0
+    {
+        return discriminator % 5;
     }
 
     discord_user_id
