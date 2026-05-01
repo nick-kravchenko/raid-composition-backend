@@ -1,12 +1,16 @@
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpServer, http::header, web};
 use dotenv::dotenv;
 
+use crate::api::error::json_error_handler;
 use crate::api::routes;
+use crate::auth::geoip::GeoIp;
 use crate::config::Config;
 use crate::state::AppState;
 
 mod api;
+mod auth;
 mod config;
 mod db;
 mod state;
@@ -37,7 +41,12 @@ async fn main() -> std::io::Result<()> {
         "Discord Client Secret: {}",
         mask_secret(&config.discord.client_secret)
     );
+    println!("Discord Redirect URL: {}", config.discord.redirect_url);
     println!("Cookie Domain: {}", config.cookie.domain);
+    println!(
+        "GeoIP Database Path: {}",
+        config.geoip.database_path.display()
+    );
 
     let app_port: u16 = config.app.port;
     println!("Starting server on port: {}", app_port);
@@ -62,16 +71,36 @@ async fn main() -> std::io::Result<()> {
     })?;
     println!("Redis client created.");
 
+    let http_client = reqwest::Client::builder()
+        .user_agent("raid-composition-backend/0.1")
+        .build()
+        .map_err(|error| std::io::Error::other(format!("Failed to create HTTP client: {error}")))?;
+    let geoip = GeoIp::open(&config.geoip.database_path);
+
     let state = web::Data::new(AppState {
         config,
         db_pool,
         redis_client,
+        http_client,
+        geoip,
     });
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin(&state.config.frontend.base_url)
+            .allowed_methods(vec!["GET", "POST", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                header::CONTENT_TYPE,
+                header::HeaderName::from_static("x-csrf-token"),
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
             .app_data(state.clone())
+            .app_data(web::JsonConfig::default().error_handler(json_error_handler))
             .wrap(Logger::default())
+            .wrap(cors)
             .service(routes::api_v1())
     })
     .bind(("0.0.0.0", app_port))?

@@ -1,19 +1,24 @@
-use actix_web::{HttpResponse, Scope, web};
+use actix_web::{Scope, web};
 
 pub fn scope() -> Scope {
     web::scope("/auth")
-        .service(web::scope("/discord").route("/url", web::get().to(discord::auth_url)))
+        .service(
+            web::scope("/discord")
+                .route("/url", web::get().to(discord::auth_url))
+                .route("/callback", web::post().to(discord::callback)),
+        )
         .service(
             web::scope("")
-                .route("/me", web::get().to(me))
-                .route("/logout", web::post().to(session::logout)),
+                .route("/session", web::get().to(session::current))
+                .route("/sessions", web::get().to(session::list))
+                .route("/logout", web::post().to(session::logout))
+                .route(
+                    "/logout-all-other-sessions",
+                    web::post().to(session::logout_all_other_sessions),
+                )
+                .route("/sessions/{session_id}", web::delete().to(session::revoke))
+                .route("/csrf", web::get().to(session::csrf)),
         )
-}
-
-async fn me() -> actix_web::Result<impl actix_web::Responder> {
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-      "message": "User info endpoint."
-    })))
 }
 
 mod discord;
