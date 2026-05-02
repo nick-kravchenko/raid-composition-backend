@@ -218,9 +218,56 @@ Base path: `/api/v1`
 | `POST` | `/auth/logout-all-other-sessions` | Revokes all active sessions except the current session. |
 | `DELETE` | `/auth/sessions/{session_id}` | Revokes another active session owned by the current user. |
 | `GET` | `/auth/csrf` | Refreshes the readable CSRF cookie for the current session. |
+| `POST` | `/guilds` | Creates an app-local guild and assigns the current user as guild admin. |
+| `GET` | `/guilds` | Lists active guilds where the current user has membership. |
+| `GET` | `/guilds/{guild_id}` | Returns an active guild where the current user has membership. |
+| `PATCH` | `/guilds/{guild_id}` | Updates a guild. Requires guild admin membership. |
+| `DELETE` | `/guilds/{guild_id}` | Soft-deletes a guild. Requires guild admin membership. |
+| `POST` | `/guilds/{guild_id}/invites` | Rotates and returns a guild invite code. Requires guild admin membership. |
+| `POST` | `/guild-invites/{invite_code}/accept` | Accepts an invite and adds the current user as an applicant. |
+| `GET` | `/guilds/{guild_id}/members` | Lists members for a guild where the current user has membership. |
+| `PATCH` | `/guilds/{guild_id}/members/{user_id}` | Promotes an applicant to raider or officer. Requires guild admin membership. |
 | `GET` | `/health` | Checks application liveness. |
 | `GET` | `/health/postgres` | Checks PostgreSQL connectivity with `SELECT 1`. |
 | `GET` | `/health/redis` | Checks Redis connectivity with an authenticated `PING`. |
+
+Guild create and update payloads use `name`, `realm`, `region`, `faction`, and `game_version`. Supported `game_version` values are `classic1x`, `classic`, and `classicann`.
+
+Single-guild responses include the guild's active invite URL only when the requesting member is an `admin` or `officer`:
+
+```json
+{
+  "guild": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "name": "Raid Team",
+    "realm": "Draenor",
+    "region": "eu",
+    "faction": "horde",
+    "game_version": "classic",
+    "invite_url": "http://localhost:4200/guild-invites/invite-code",
+    "membership_role": "admin"
+  }
+}
+```
+
+`GET /guilds/{guild_id}/members` includes Discord identity data for each member:
+
+```json
+{
+  "members": [
+    {
+      "user_id": "00000000-0000-0000-0000-000000000000",
+      "role": "raider",
+      "discord": {
+        "id": "123456789",
+        "username": "discord_name",
+        "global_name": "Display Name",
+        "avatar_url": "https://cdn.discordapp.com/avatars/123456789/avatar.png?size=128"
+      }
+    }
+  ]
+}
+```
 
 Example:
 

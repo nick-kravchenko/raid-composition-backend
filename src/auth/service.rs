@@ -936,7 +936,7 @@ async fn load_auth_context(pool: &PgPool, token_hash: &str) -> Result<AuthContex
     }
 }
 
-async fn validate_csrf_async(
+pub(crate) async fn validate_csrf_async(
     state: &AppState,
     req: &HttpRequest,
     session_id: Uuid,

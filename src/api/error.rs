@@ -50,6 +50,10 @@ impl ApiError {
         Self::new(StatusCode::CONFLICT, code, message)
     }
 
+    pub fn not_found(code: &'static str, message: &'static str) -> Self {
+        Self::new(StatusCode::NOT_FOUND, code, message)
+    }
+
     pub fn bad_gateway(code: &'static str, message: &'static str) -> Self {
         Self::new(StatusCode::BAD_GATEWAY, code, message)
     }

@@ -13,6 +13,7 @@ mod api;
 mod auth;
 mod config;
 mod db;
+mod guilds;
 mod state;
 
 #[actix_web::main]
@@ -88,7 +89,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin(&state.config.frontend.base_url)
-            .allowed_methods(vec!["GET", "POST", "DELETE", "OPTIONS"])
+            .allowed_methods(vec!["GET", "POST", "PATCH", "DELETE", "OPTIONS"])
             .allowed_headers(vec![
                 header::CONTENT_TYPE,
                 header::HeaderName::from_static("x-csrf-token"),
