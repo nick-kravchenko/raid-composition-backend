@@ -24,4 +24,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
     }
+
+    #[actix_web::test]
+    async fn api_v1_character_warcraftlogs_refresh_route_is_registered() {
+        let app = test::init_service(App::new().service(api_v1())).await;
+
+        let response = test::call_service(
+            &app,
+            test::TestRequest::post()
+                .uri("/api/v1/characters/00000000-0000-0000-0000-000000000000/warcraftlogs/refresh")
+                .to_request(),
+        )
+        .await;
+
+        assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[actix_web::test]
+    async fn api_v1_character_battlenet_refresh_route_is_registered() {
+        let app = test::init_service(App::new().service(api_v1())).await;
+
+        let response = test::call_service(
+            &app,
+            test::TestRequest::post()
+                .uri("/api/v1/characters/00000000-0000-0000-0000-000000000000/battlenet/refresh")
+                .to_request(),
+        )
+        .await;
+
+        assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    }
 }

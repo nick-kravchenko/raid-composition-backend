@@ -13,6 +13,8 @@ pub struct Config {
     pub cookie: CookieConfig,
     pub security: SecurityConfig,
     pub geoip: GeoIpConfig,
+    pub warcraftlogs: WarcraftLogsConfig,
+    pub battlenet: BattleNetConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +70,24 @@ pub struct GeoIpConfig {
     pub database_path: PathBuf,
 }
 
+#[derive(Debug, Clone)]
+pub struct WarcraftLogsConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub oauth_token_url: String,
+    pub endpoint: String,
+    pub zone_id: Option<u32>,
+    pub skip_gear: bool,
+    pub api_delay_ms: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct BattleNetConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub game_version: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigError {
     Missing {
@@ -91,6 +111,10 @@ pub enum ConfigError {
         value: String,
     },
     InvalidUrl {
+        name: &'static str,
+        value: String,
+    },
+    InvalidUnsignedInteger {
         name: &'static str,
         value: String,
     },
@@ -154,6 +178,28 @@ impl Config {
             },
             geoip: GeoIpConfig {
                 database_path: PathBuf::from(required_string(&get, "GEOIP_DATABASE_PATH")?),
+            },
+            warcraftlogs: WarcraftLogsConfig {
+                client_id: required_string(&get, "WCL_CLIENT_ID")?,
+                client_secret: required_string(&get, "WCL_CLIENT_SECRET")?,
+                oauth_token_url: optional_url(
+                    &get,
+                    "WCL_OAUTH_TOKEN_URL",
+                    "https://www.warcraftlogs.com/oauth/token",
+                )?,
+                endpoint: optional_url(
+                    &get,
+                    "WCL_ENDPOINT",
+                    "https://fresh.warcraftlogs.com/api/v2/client",
+                )?,
+                zone_id: optional_u32(&get, "WCL_ZONE_ID")?,
+                skip_gear: optional_bool(&get, "WCL_SKIP_GEAR", false)?,
+                api_delay_ms: optional_u64(&get, "WCL_API_DELAY_MS", 300)?,
+            },
+            battlenet: BattleNetConfig {
+                client_id: required_string(&get, "BNET_CLIENT_ID")?,
+                client_secret: required_string(&get, "BNET_CLIENT_SECRET")?,
+                game_version: optional_string(&get, "BNET_GAME_VERSION", "classic")?,
             },
         })
     }
@@ -221,6 +267,10 @@ impl fmt::Display for ConfigError {
             Self::InvalidUrl { name, value } => write!(
                 formatter,
                 "environment variable {name} must be an absolute http(s) URL, got {value:?}"
+            ),
+            Self::InvalidUnsignedInteger { name, value } => write!(
+                formatter,
+                "environment variable {name} must be an unsigned integer, got {value:?}"
             ),
             Self::WeakSecret {
                 name,
@@ -313,16 +363,60 @@ where
     F: Fn(&'static str) -> Option<String>,
 {
     let value = required_string(get, name)?;
+    validate_url(name, &value)?;
+    Ok(value)
+}
+
+fn optional_url<F>(get: &F, name: &'static str, default: &str) -> Result<String, ConfigError>
+where
+    F: Fn(&'static str) -> Option<String>,
+{
+    let value = optional_string(get, name, default)?;
+    validate_url(name, &value)?;
+    Ok(value)
+}
+
+fn validate_url(name: &'static str, value: &str) -> Result<(), ConfigError> {
     let parsed = url::Url::parse(&value).map_err(|_| ConfigError::InvalidUrl {
         name,
-        value: value.clone(),
+        value: value.to_string(),
     })?;
 
     if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
-        return Err(ConfigError::InvalidUrl { name, value });
+        return Err(ConfigError::InvalidUrl {
+            name,
+            value: value.to_string(),
+        });
     }
 
-    Ok(value)
+    Ok(())
+}
+
+fn optional_u32<F>(get: &F, name: &'static str) -> Result<Option<u32>, ConfigError>
+where
+    F: Fn(&'static str) -> Option<String>,
+{
+    match get(name) {
+        Some(value) if value.trim().is_empty() => Ok(None),
+        Some(value) => value
+            .parse::<u32>()
+            .map(Some)
+            .map_err(|_| ConfigError::InvalidUnsignedInteger { name, value }),
+        None => Ok(None),
+    }
+}
+
+fn optional_u64<F>(get: &F, name: &'static str, default: u64) -> Result<u64, ConfigError>
+where
+    F: Fn(&'static str) -> Option<String>,
+{
+    match get(name) {
+        Some(value) if value.trim().is_empty() => Err(ConfigError::Empty { name }),
+        Some(value) => value
+            .parse::<u64>()
+            .map_err(|_| ConfigError::InvalidUnsignedInteger { name, value }),
+        None => Ok(default),
+    }
 }
 
 fn required_secret<F>(
@@ -422,6 +516,10 @@ mod tests {
                 "01234567890123456789012345678901".to_string(),
             ),
             ("GEOIP_DATABASE_PATH", "/tmp/GeoLite2-City.mmdb".to_string()),
+            ("WCL_CLIENT_ID", "wcl-client".to_string()),
+            ("WCL_CLIENT_SECRET", "wcl-secret".to_string()),
+            ("BNET_CLIENT_ID", "bnet-client".to_string()),
+            ("BNET_CLIENT_SECRET", "bnet-secret".to_string()),
         ])
     }
 
@@ -445,6 +543,92 @@ mod tests {
         assert_eq!(config.cookie.domain, "localhost");
         assert_eq!(config.cookie.session_name, "session");
         assert_eq!(config.cookie.csrf_name, "csrf");
+        assert_eq!(config.warcraftlogs.client_id, "wcl-client");
+        assert_eq!(config.warcraftlogs.client_secret, "wcl-secret");
+        assert_eq!(
+            config.warcraftlogs.oauth_token_url,
+            "https://www.warcraftlogs.com/oauth/token"
+        );
+        assert_eq!(
+            config.warcraftlogs.endpoint,
+            "https://fresh.warcraftlogs.com/api/v2/client"
+        );
+        assert_eq!(config.warcraftlogs.zone_id, None);
+        assert!(!config.warcraftlogs.skip_gear);
+        assert_eq!(config.warcraftlogs.api_delay_ms, 300);
+        assert_eq!(config.battlenet.client_id, "bnet-client");
+        assert_eq!(config.battlenet.client_secret, "bnet-secret");
+        assert_eq!(config.battlenet.game_version, "classic");
+    }
+
+    #[test]
+    fn missing_battlenet_client_id_is_an_error() {
+        let mut env = valid_env();
+        env.remove("BNET_CLIENT_ID");
+
+        assert_eq!(
+            config_from(&env).expect_err("config should fail"),
+            ConfigError::Missing {
+                name: "BNET_CLIENT_ID"
+            }
+        );
+    }
+
+    #[test]
+    fn loads_optional_battlenet_values() {
+        let mut env = valid_env();
+        env.insert("BNET_GAME_VERSION", "classic1x".to_string());
+
+        let config = config_from(&env).expect("config should load");
+
+        assert_eq!(config.battlenet.game_version, "classic1x");
+    }
+
+    #[test]
+    fn missing_warcraftlogs_client_id_is_an_error() {
+        let mut env = valid_env();
+        env.remove("WCL_CLIENT_ID");
+
+        assert_eq!(
+            config_from(&env).expect_err("config should fail"),
+            ConfigError::Missing {
+                name: "WCL_CLIENT_ID"
+            }
+        );
+    }
+
+    #[test]
+    fn loads_optional_warcraftlogs_values() {
+        let mut env = valid_env();
+        env.insert("WCL_ZONE_ID", "1012".to_string());
+        env.insert("WCL_SKIP_GEAR", "true".to_string());
+        env.insert("WCL_API_DELAY_MS", "750".to_string());
+        env.insert("WCL_ENDPOINT", "https://example.test/graphql".to_string());
+        env.insert(
+            "WCL_OAUTH_TOKEN_URL",
+            "https://example.test/oauth/token".to_string(),
+        );
+
+        let config = config_from(&env).expect("config should load");
+
+        assert_eq!(config.warcraftlogs.zone_id, Some(1012));
+        assert!(config.warcraftlogs.skip_gear);
+        assert_eq!(config.warcraftlogs.api_delay_ms, 750);
+        assert_eq!(config.warcraftlogs.endpoint, "https://example.test/graphql");
+        assert_eq!(
+            config.warcraftlogs.oauth_token_url,
+            "https://example.test/oauth/token"
+        );
+    }
+
+    #[test]
+    fn empty_optional_warcraftlogs_zone_id_is_unset() {
+        let mut env = valid_env();
+        env.insert("WCL_ZONE_ID", String::new());
+
+        let config = config_from(&env).expect("config should load");
+
+        assert_eq!(config.warcraftlogs.zone_id, None);
     }
 
     #[test]

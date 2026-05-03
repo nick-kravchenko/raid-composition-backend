@@ -21,11 +21,8 @@ mod tests {
     async fn app_health_route_is_registered() {
         let app = test::init_service(App::new().service(scope())).await;
 
-        let response = test::call_service(
-            &app,
-            test::TestRequest::get().uri("/health").to_request(),
-        )
-        .await;
+        let response =
+            test::call_service(&app, test::TestRequest::get().uri("/health").to_request()).await;
 
         assert_eq!(response.status(), StatusCode::OK);
     }

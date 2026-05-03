@@ -64,6 +64,10 @@ Required variables:
 | `SESSION_HMAC_SECRET` | Secret used to HMAC session, CSRF, and OAuth state tokens. Must be at least 32 bytes. |
 | `GEOIP_DATABASE_PATH` | Path to a MaxMind GeoLite2 City `.mmdb` file. Missing files disable GeoIP lookup without failing startup. |
 | `COOKIE_DOMAIN` | Cookie domain for auth/session cookies. |
+| `WCL_CLIENT_ID` | Warcraft Logs API client ID. |
+| `WCL_CLIENT_SECRET` | Warcraft Logs API client secret. |
+| `BNET_CLIENT_ID` | Battle.net API client ID. |
+| `BNET_CLIENT_SECRET` | Battle.net API client secret. |
 
 Optional cookie variables:
 
@@ -73,6 +77,24 @@ Optional cookie variables:
 | `COOKIE_SAME_SITE` | `Lax` | Cookie SameSite policy: `Lax`, `Strict`, or `None`. |
 | `SESSION_COOKIE_NAME` | `session` | HTTP-only session cookie name. |
 | `CSRF_COOKIE_NAME` | `csrf` | Readable CSRF cookie name. |
+
+Optional Warcraft Logs variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `WCL_OAUTH_TOKEN_URL` | `https://www.warcraftlogs.com/oauth/token` | Warcraft Logs OAuth client-credentials token URL. |
+| `WCL_ENDPOINT` | `https://fresh.warcraftlogs.com/api/v2/client` | Warcraft Logs v2 GraphQL client endpoint. |
+| `WCL_ZONE_ID` | unset | Optional zone ID used to filter character rankings. |
+| `WCL_SKIP_GEAR` | `false` | Set to `true` to skip CombatantInfo gear fetching during refresh. |
+| `WCL_API_DELAY_MS` | `300` | Delay between Warcraft Logs API calls within one refresh. |
+
+Optional Battle.net variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BNET_GAME_VERSION` | `classic` | Battle.net profile namespace flavor: `retail`, `classic1x`, or classic anniversary-style default. |
+
+Battle.net and Warcraft Logs refreshes read the character's `server` and `region` from the database row. There are no separate realm or region environment variables for those refresh paths.
 
 The API requires every required variable above to be present, non-empty, and valid at startup. Ports must be non-zero `u16` values. Missing, malformed, or weak auth configuration stops the server before it binds an HTTP port.
 
@@ -104,6 +126,12 @@ GEOIP_DATABASE_PATH=/app/local/GeoLite2-City.mmdb
 COOKIE_DOMAIN=localhost
 COOKIE_SECURE=false
 COOKIE_SAME_SITE=Lax
+
+WCL_CLIENT_ID=your_warcraftlogs_client_id
+WCL_CLIENT_SECRET=your_warcraftlogs_client_secret
+
+BNET_CLIENT_ID=your_battlenet_client_id
+BNET_CLIENT_SECRET=your_battlenet_client_secret
 ```
 
 Generate local development secrets with:
@@ -227,6 +255,8 @@ Base path: `/api/v1`
 | `POST` | `/guild-invites/{invite_code}/accept` | Accepts an invite and adds the current user as an applicant. |
 | `GET` | `/guilds/{guild_id}/members` | Lists members for a guild where the current user has membership. |
 | `PATCH` | `/guilds/{guild_id}/members/{user_id}` | Promotes an applicant to raider or officer. Requires guild admin membership. |
+| `POST` | `/characters/{character_id}/warcraftlogs/refresh` | Refreshes the authenticated user's Warcraft Logs snapshot for a character. Requires CSRF. |
+| `POST` | `/characters/{character_id}/battlenet/refresh` | Refreshes the authenticated user's Battle.net snapshot for a character. Requires CSRF. |
 | `GET` | `/health` | Checks application liveness. |
 | `GET` | `/health/postgres` | Checks PostgreSQL connectivity with `SELECT 1`. |
 | `GET` | `/health/redis` | Checks Redis connectivity with an authenticated `PING`. |
