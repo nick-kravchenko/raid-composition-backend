@@ -10,25 +10,22 @@ use crate::{
 };
 
 pub fn scope() -> Scope {
-    web::scope("")
-        .service(
-            web::scope("/guilds")
-                .route("", web::post().to(create))
-                .route("", web::get().to(list))
-                .route("/{guild_id}", web::get().to(get))
-                .route("/{guild_id}", web::patch().to(update))
-                .route("/{guild_id}", web::delete().to(delete))
-                .route("/{guild_id}/invites", web::post().to(invites::create))
-                .route("/{guild_id}/members", web::get().to(members::list))
-                .route(
-                    "/{guild_id}/members/{user_id}",
-                    web::patch().to(members::update_role),
-                ),
+    web::scope("/guilds")
+        .route("", web::post().to(create))
+        .route("", web::get().to(list))
+        .route("/{guild_id}", web::get().to(get))
+        .route("/{guild_id}", web::patch().to(update))
+        .route("/{guild_id}", web::delete().to(delete))
+        .route("/{guild_id}/invites", web::post().to(invites::create))
+        .route("/{guild_id}/members", web::get().to(members::list))
+        .route(
+            "/{guild_id}/members/{user_id}",
+            web::patch().to(members::update_role),
         )
-        .service(
-            web::scope("/guild-invites")
-                .route("/{invite_code}/accept", web::post().to(invites::accept)),
-        )
+}
+
+pub fn invite_scope() -> Scope {
+    web::scope("/guild-invites").route("/{invite_code}/accept", web::post().to(invites::accept))
 }
 
 async fn create(

@@ -4,6 +4,7 @@ pub fn scope() -> Scope {
     web::scope("/v1")
         .service(auth::scope())
         .service(guilds::scope())
+        .service(guilds::invite_scope())
         .service(health::scope())
 }
 
