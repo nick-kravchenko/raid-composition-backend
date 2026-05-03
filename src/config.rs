@@ -377,7 +377,7 @@ where
 }
 
 fn validate_url(name: &'static str, value: &str) -> Result<(), ConfigError> {
-    let parsed = url::Url::parse(&value).map_err(|_| ConfigError::InvalidUrl {
+    let parsed = url::Url::parse(value).map_err(|_| ConfigError::InvalidUrl {
         name,
         value: value.to_string(),
     })?;
