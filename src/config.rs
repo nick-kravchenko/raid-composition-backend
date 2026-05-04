@@ -15,6 +15,7 @@ pub struct Config {
     pub geoip: GeoIpConfig,
     pub warcraftlogs: WarcraftLogsConfig,
     pub battlenet: BattleNetConfig,
+    pub seeds: SeedConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -86,6 +87,11 @@ pub struct BattleNetConfig {
     pub client_id: String,
     pub client_secret: String,
     pub game_version: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SeedConfig {
+    pub run_db_seeds: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -200,6 +206,9 @@ impl Config {
                 client_id: required_string(&get, "BNET_CLIENT_ID")?,
                 client_secret: required_string(&get, "BNET_CLIENT_SECRET")?,
                 game_version: optional_string(&get, "BNET_GAME_VERSION", "classic")?,
+            },
+            seeds: SeedConfig {
+                run_db_seeds: optional_bool(&get, "RUN_DB_SEEDS", false)?,
             },
         })
     }
@@ -559,6 +568,17 @@ mod tests {
         assert_eq!(config.battlenet.client_id, "bnet-client");
         assert_eq!(config.battlenet.client_secret, "bnet-secret");
         assert_eq!(config.battlenet.game_version, "classic");
+        assert!(!config.seeds.run_db_seeds);
+    }
+
+    #[test]
+    fn loads_optional_seed_values() {
+        let mut env = valid_env();
+        env.insert("RUN_DB_SEEDS", "true".to_string());
+
+        let config = config_from(&env).expect("config should load");
+
+        assert!(config.seeds.run_db_seeds);
     }
 
     #[test]

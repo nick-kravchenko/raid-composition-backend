@@ -94,6 +94,12 @@ Optional Battle.net variables:
 | --- | --- | --- |
 | `BNET_GAME_VERSION` | `classic` | Battle.net profile namespace flavor: `retail`, `classic1x`, or classic anniversary-style default. |
 
+Optional seed variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `RUN_DB_SEEDS` | `false` | Runs embedded SQL seed files from `seeds/` after migrations during API startup. |
+
 Battle.net and Warcraft Logs refreshes read the character's `server` and `region` from the database row. There are no separate realm or region environment variables for those refresh paths.
 
 The API requires every required variable above to be present, non-empty, and valid at startup. Ports must be non-zero `u16` values. Missing, malformed, or weak auth configuration stops the server before it binds an HTTP port.
@@ -159,6 +165,20 @@ cargo run
 The API connects to PostgreSQL, runs embedded SQLx migrations, creates the Redis client, then binds to `0.0.0.0:${APP_PORT}`. If migrations fail, startup stops before the HTTP port is bound.
 
 GeoIP lookup is best-effort. To enable it locally, download a MaxMind GeoLite2 City database and set `GEOIP_DATABASE_PATH` to the `.mmdb` file path visible to the API process. If the file is missing, GeoIP is disabled and location fields remain `null`.
+
+## Database Seeds
+
+Seed SQL files live in `seeds/` next to `migrations/` and are embedded into the API binary. Set `RUN_DB_SEEDS=true` to run unapplied seed files after migrations during API startup:
+
+```env
+RUN_DB_SEEDS=true
+```
+
+Applied seeds are tracked in the `seed_history` table by name and checksum, so repeated container starts do not reapply unchanged seeds. If a seed file changes after it was applied, startup fails instead of silently applying drifted data.
+
+The current character roster seed targets existing guild `a1f1bcf2-47c2-4d57-bf9e-24edd3a6dcae`. It embeds the roster data directly in SQL, skips players with empty Discord IDs, skips characters missing a Battle.net race, creates or reuses users by Discord ID, creates or restores guild memberships as `raider`, and upserts core character rows only. It does not write Battle.net or Warcraft Logs snapshot tables.
+
+Seed rollback SQL is provided for manual use as `*.down.sql`. Startup only applies `*.up.sql` seeds.
 
 ## Running With Docker Compose
 

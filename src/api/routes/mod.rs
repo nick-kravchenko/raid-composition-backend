@@ -54,4 +54,34 @@ mod tests {
 
         assert_ne!(response.status(), StatusCode::NOT_FOUND);
     }
+
+    #[actix_web::test]
+    async fn api_v1_character_get_route_is_registered() {
+        let app = test::init_service(App::new().service(api_v1())).await;
+
+        let response = test::call_service(
+            &app,
+            test::TestRequest::get()
+                .uri("/api/v1/characters/00000000-0000-0000-0000-000000000000")
+                .to_request(),
+        )
+        .await;
+
+        assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[actix_web::test]
+    async fn api_v1_guild_characters_route_is_registered() {
+        let app = test::init_service(App::new().service(api_v1())).await;
+
+        let response = test::call_service(
+            &app,
+            test::TestRequest::get()
+                .uri("/api/v1/guilds/00000000-0000-0000-0000-000000000000/characters")
+                .to_request(),
+        )
+        .await;
+
+        assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    }
 }

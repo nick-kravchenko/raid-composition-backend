@@ -12,6 +12,7 @@ use crate::state::AppState;
 mod api;
 mod auth;
 mod battlenet;
+mod characters;
 mod config;
 mod db;
 mod guilds;
@@ -69,6 +70,7 @@ async fn main() -> std::io::Result<()> {
         mask_secret(&config.battlenet.client_secret)
     );
     println!("Battle.net Game Version: {}", config.battlenet.game_version);
+    println!("Run DB Seeds: {}", config.seeds.run_db_seeds);
 
     let app_port: u16 = config.app.port;
     println!("Starting server on port: {}", app_port);
@@ -86,6 +88,17 @@ async fn main() -> std::io::Result<()> {
         std::io::Error::other(format!("Failed to run database migrations: {error}"))
     })?;
     println!("Database migrations completed.");
+
+    if config.seeds.run_db_seeds {
+        println!("Running database seeds...");
+        db::run_seeds(&db_pool).await.map_err(|error| {
+            eprintln!("Failed to run database seeds: {error}");
+            std::io::Error::other(format!("Failed to run database seeds: {error}"))
+        })?;
+        println!("Database seeds completed.");
+    } else {
+        println!("Database seeds skipped.");
+    }
 
     println!("Creating Redis client...");
     let redis_client = redis::Client::open(config.redis.url()).map_err(|error| {

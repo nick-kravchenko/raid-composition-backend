@@ -2,6 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, Scope, web};
 use uuid::Uuid;
 
 use crate::{
+    characters,
     guilds::{
         dto::{CreateGuildRequestDto, UpdateGuildRequestDto},
         service,
@@ -16,6 +17,7 @@ pub fn scope() -> Scope {
         .route("/{guild_id}", web::get().to(get))
         .route("/{guild_id}", web::patch().to(update))
         .route("/{guild_id}", web::delete().to(delete))
+        .route("/{guild_id}/characters", web::get().to(characters_list))
         .route("/{guild_id}/invites", web::post().to(invites::create))
         .route("/{guild_id}/members", web::get().to(members::list))
         .route(
@@ -66,6 +68,17 @@ async fn delete(
     guild_id: web::Path<Uuid>,
 ) -> actix_web::Result<HttpResponse> {
     Ok(service::delete_guild_response(state, req, guild_id.into_inner()).await?)
+}
+
+async fn characters_list(
+    state: web::Data<AppState>,
+    req: HttpRequest,
+    guild_id: web::Path<Uuid>,
+) -> actix_web::Result<HttpResponse> {
+    Ok(
+        characters::service::list_guild_characters_response(state, req, guild_id.into_inner())
+            .await?,
+    )
 }
 
 mod invites;
