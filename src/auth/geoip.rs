@@ -43,23 +43,20 @@ impl GeoIp {
             return Location::default();
         };
 
-        let Ok(Some(city)) = reader.lookup::<geoip2::City<'_>>(ip) else {
+        let Ok(Some(city)) = reader
+            .lookup(ip)
+            .and_then(|result| result.decode::<geoip2::City<'_>>())
+        else {
             return Location::default();
         };
 
         Location {
-            country: city
-                .country
-                .and_then(|country| country.iso_code.map(ToOwned::to_owned)),
-            region: city.subdivisions.and_then(|mut subdivisions| {
-                subdivisions
-                    .pop()
-                    .and_then(|region| region.iso_code.map(ToOwned::to_owned))
-            }),
-            city: city.city.and_then(|city| {
-                city.names
-                    .and_then(|names| names.get("en").map(|value| (*value).to_string()))
-            }),
+            country: city.country.iso_code.map(ToOwned::to_owned),
+            region: city
+                .subdivisions
+                .last()
+                .and_then(|region| region.iso_code.map(ToOwned::to_owned)),
+            city: city.city.names.english.map(ToOwned::to_owned),
         }
     }
 }

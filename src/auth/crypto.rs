@@ -1,10 +1,10 @@
 use base64::{Engine as _, engine::general_purpose};
 use chacha20poly1305::{
     XChaCha20Poly1305, XNonce,
-    aead::{Aead, KeyInit, OsRng},
+    aead::{Aead, KeyInit},
 };
 use hmac::{Hmac, Mac};
-use rand::RngCore;
+use rand::{TryRng, rngs::SysRng};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
@@ -31,13 +31,15 @@ impl HashDomain {
 
 pub fn random_token(bytes: usize) -> String {
     let mut token = vec![0_u8; bytes];
-    OsRng.fill_bytes(&mut token);
+    SysRng
+        .try_fill_bytes(&mut token)
+        .expect("OS random number generator is available");
     general_purpose::URL_SAFE_NO_PAD.encode(token)
 }
 
 pub fn token_hash(secret: &[u8], domain: HashDomain, token: &str) -> String {
     let mut mac =
-        <HmacSha256 as Mac>::new_from_slice(secret).expect("HMAC accepts keys of any length");
+        <HmacSha256 as KeyInit>::new_from_slice(secret).expect("HMAC accepts keys of any length");
     mac.update(domain.prefix().as_bytes());
     mac.update(token.as_bytes());
     general_purpose::STANDARD.encode(mac.finalize().into_bytes())
@@ -51,7 +53,9 @@ pub fn constant_time_eq(left: &str, right: &str) -> bool {
 pub fn encrypt_token(key: &[u8; 32], plaintext: &str) -> Result<String, ApiError> {
     let cipher = XChaCha20Poly1305::new(key.into());
     let mut nonce = [0_u8; 24];
-    OsRng.fill_bytes(&mut nonce);
+    SysRng
+        .try_fill_bytes(&mut nonce)
+        .expect("OS random number generator is available");
 
     let ciphertext = cipher
         .encrypt(XNonce::from_slice(&nonce), plaintext.as_bytes())

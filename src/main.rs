@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer, http::header, web};
-use dotenv::dotenv;
+use dotenvy::dotenv;
 
 use crate::api::error::json_error_handler;
 use crate::api::routes;
@@ -312,7 +312,7 @@ mod warcraftlogs_tests {
     #[actix_web::test]
     #[ignore = "requires real WCL credentials, database access, and external Warcraft Logs API access"]
     async fn warcraftlogs_live_rankings_fetches_krava_from_db_character_data() {
-        dotenv::dotenv().ok();
+        dotenvy::dotenv().ok();
 
         let config = Config::from_env().expect("backend .env should include WCL credentials");
         let db_pool = PgPoolOptions::new()
@@ -529,7 +529,7 @@ mod battlenet_tests {
     #[actix_web::test]
     #[ignore = "requires real Battle.net credentials and external Blizzard API access"]
     async fn battlenet_live_profile_fetches_krava_from_db_character_data() {
-        dotenv::dotenv().ok();
+        dotenvy::dotenv().ok();
 
         let config =
             Config::from_env().expect("backend .env should include Battle.net credentials");

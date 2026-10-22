@@ -72,7 +72,7 @@ pub async fn list_guild_characters_response(
     let (context, refreshed_cookie) = auth_service::authenticate(&state, &req).await?;
     require_guild_membership(&state.db_pool, guild_id, context.user_id).await?;
 
-    let characters = sqlx::query_as::<_, CharacterRow>(&format!(
+    let characters = sqlx::query_as::<_, CharacterRow>(sqlx::AssertSqlSafe(format!(
         r#"
         select {}
         from characters c
@@ -85,7 +85,7 @@ pub async fn list_guild_characters_response(
         order by gm.created_at asc, c.created_at asc
         "#,
         select_character_columns()
-    ))
+    )))
     .bind(guild_id)
     .fetch_all(&state.db_pool)
     .await?;
@@ -109,7 +109,7 @@ pub async fn get_character_response(
 ) -> Result<HttpResponse, ApiError> {
     let (context, refreshed_cookie) = auth_service::authenticate(&state, &req).await?;
 
-    let character = sqlx::query_as::<_, CharacterRow>(&format!(
+    let character = sqlx::query_as::<_, CharacterRow>(sqlx::AssertSqlSafe(format!(
         r#"
         select {}
         from characters c
@@ -133,7 +133,7 @@ pub async fn get_character_response(
           )
         "#,
         select_character_columns()
-    ))
+    )))
     .bind(character_id)
     .bind(context.user_id)
     .fetch_optional(&state.db_pool)
