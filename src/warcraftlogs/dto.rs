@@ -17,6 +17,7 @@ pub struct CharacterData {
 pub struct WclCharacter {
     pub id: i64,
     pub name: String,
+    #[serde(rename = "classID")]
     pub class_id: i32,
     pub server: WclServer,
     pub zone_rankings: Option<Value>,

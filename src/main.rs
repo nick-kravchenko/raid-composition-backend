@@ -156,7 +156,7 @@ mod warcraftlogs_tests {
         config::Config,
         warcraftlogs::{
             client::{WarcraftLogsClient, build_basic_auth_value, extract_graphql_data},
-            dto::{Actor, ZoneRankingsSummary},
+            dto::{Actor, CharacterRankingsResponse, ZoneRankingsSummary},
             normalize::normalize_zone_rankings,
             queries::GET_CHARACTER_RANKINGS,
             service::{build_snapshot, find_player_actor_id},
@@ -181,6 +181,36 @@ mod warcraftlogs_tests {
         .expect_err("graphql errors should fail");
 
         assert!(error.to_string().contains("rate limited"));
+    }
+
+    #[test]
+    fn warcraftlogs_character_rankings_decodes_class_id_field() {
+        let response = extract_graphql_data::<CharacterRankingsResponse>(json!({
+            "data": {
+                "characterData": {
+                    "character": {
+                        "id": 1001,
+                        "name": "Kravá",
+                        "classID": 8,
+                        "server": {
+                            "name": "Firemaw",
+                            "slug": "firemaw",
+                            "region": {
+                                "name": "EU",
+                                "slug": "EU"
+                            }
+                        },
+                        "zoneRankings": null
+                    }
+                }
+            }
+        }))
+        .expect("classID should decode");
+
+        assert_eq!(
+            response.character_data.character.unwrap().class_id,
+            8
+        );
     }
 
     #[test]
