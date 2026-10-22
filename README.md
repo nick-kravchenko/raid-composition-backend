@@ -35,7 +35,7 @@ docker-compose.yml        # Local PostgreSQL, Redis, and API services
 
 ## Configuration
 
-The application reads required configuration from environment variables. During local development, `dotenv` loads values from `.env` once during startup.
+The application reads required configuration from environment variables. During local development, `dotenvy` loads values from `.env` once during startup.
 
 Create your local environment file from the example:
 
@@ -239,7 +239,7 @@ The `-r` flag creates the required reversible `.up.sql` and `.down.sql` files. `
 Host CLI usage is optional. Install the matching CLI version with PostgreSQL support:
 
 ```bash
-cargo install sqlx-cli --version 0.8.6 --no-default-features --features postgres
+cargo install sqlx-cli --version 0.9.0 --no-default-features --features postgres
 ```
 
 Use `localhost` for the database host when running SQLx from the host against the Compose PostgreSQL port mapping:
